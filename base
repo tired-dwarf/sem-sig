@@ -1,0 +1,160 @@
+const byte segPins[] = {2, 3, 4, 5, 6, 7, 8};
+const byte digPins[] = {9, 10, 11, 12};
+const byte BTN = 13;
+
+const byte codes[10][7] = {
+  {0,0,0,0,0,0,1}, {1,0,0,1,1,1,1}, {0,0,1,0,0,1,0},
+  {0,0,0,0,1,1,0}, {1,0,0,1,1,0,0}, {0,1,0,0,1,0,0},
+  {0,1,0,0,0,0,0}, {0,0,0,1,1,1,1}, {0,0,0,0,0,0,0},
+  {0,0,0,0,1,0,0}
+};
+
+int counter = 23;
+const int MAX_VAL = 23;
+bool paused = false;
+bool showInitial = true;
+
+unsigned long lastDisplay = 0;
+unsigned long lastSecond = 0;
+unsigned long initialStart = 0;
+byte digIdx = 0;
+
+void setup() {
+  for (byte i = 0; i < 7; i++) {
+    pinMode(segPins[i], OUTPUT);
+    digitalWrite(segPins[i], HIGH);
+  }
+  for (byte i = 0; i < 4; i++) {
+    pinMode(digPins[i], OUTPUT);
+    digitalWrite(digPins[i], LOW);
+  }
+  pinMode(BTN, INPUT_PULLUP);
+  initialStart = millis();
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  if (showInitial) {
+    if (now - initialStart >= 2500) {
+      showInitial = false;
+      counter = 0;
+      lastSecond = now;
+    }
+  }
+  else if (!paused) {
+    if (now - lastSecond >= 500) {
+      lastSecond += 500;
+      counter++;
+      if (counter > MAX_VAL) {
+        counter = 0; // сброс к 0
+      }
+    }
+  }
+
+  static bool lastBtn = HIGH;
+  bool btn = digitalRead(BTN);
+  if (lastBtn == HIGH && btn == LOW) {
+    paused = !paused;
+    if (!paused) lastSecond = millis();
+  }
+  lastBtn = btn;
+
+  if (now - lastDisplay >= 5) {
+    lastDisplay = now;
+
+    for (byte i = 0; i < 4; i++) digitalWrite(digPins[i], LOW);
+
+    byte vals[] = {
+      counter / 1000,
+      (counter / 100) % 10,
+      (counter / 10) % 10,
+      counter % 10
+    };
+    byte d = vals[digIdx];
+
+    for (byte i = 0; i < 7; i++) digitalWrite(segPins[i], codes[d][i]);
+    digitalWrite(digPins[digIdx], HIGH);
+    digIdx = (digIdx + 1) % 4;
+  }
+}
+
+
+-----
+
+const byte segPins[] = {2, 3, 4, 5, 6, 7, 8};
+const byte digPins[] = {9, 10, 11, 12};
+const byte BTN = 13;
+
+const byte codes[10][7] = {
+  {0,0,0,0,0,0,1}, {1,0,0,1,1,1,1}, {0,0,1,0,0,1,0},
+  {0,0,0,0,1,1,0}, {1,0,0,1,1,0,0}, {0,1,0,0,1,0,0},
+  {0,1,0,0,0,0,0}, {0,0,0,1,1,1,1}, {0,0,0,0,0,0,0},
+  {0,0,0,0,1,0,0}
+};
+
+int counter = 23;
+const int MAX_VAL = 23;
+bool paused = false;
+bool showInitial = true;
+
+unsigned long lastDisplay = 0;
+unsigned long lastSecond = 0;
+unsigned long initialStart = 0;
+byte digIdx = 0;
+
+void setup() {
+  for (byte i = 0; i < 7; i++) pinMode(segPins[i], OUTPUT);
+  for (byte i = 0; i < 4; i++) pinMode(digPins[i], OUTPUT);
+  pinMode(BTN, INPUT_PULLUP);
+  initialStart = millis();
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // Таймер
+  if (showInitial) {
+    if (now - initialStart >= 2500) {
+      showInitial = false;
+      counter = 0;
+      lastSecond = now;
+    }
+  } else if (!paused && now - lastSecond >= 500) {
+    lastSecond += 500;
+    counter = (counter >= MAX_VAL) ? 0 : counter + 1;
+  }
+
+  // Кнопка с антидребезгом
+  static bool lastBtn = HIGH;
+  static unsigned long lastBtnTime = 0;
+  bool btn = digitalRead(BTN);
+  if (lastBtn == HIGH && btn == LOW && now - lastBtnTime > 50) {
+    lastBtnTime = now;
+    paused = !paused;
+    if (!paused) lastSecond = millis();
+  }
+  lastBtn = btn;
+
+  // Индикация
+  if (now - lastDisplay >= 5) {
+    lastDisplay = now;
+    showDigit(digIdx);
+    digIdx = (digIdx + 1) % 4;
+  }
+}
+
+void showDigit(byte idx) {
+  for (byte i = 0; i < 4; i++) digitalWrite(digPins[i], LOW);
+  
+  byte digits[] = {
+    counter / 1000,
+    (counter / 100) % 10,
+    (counter / 10) % 10,
+    counter % 10
+  };
+  
+  byte d = digits[idx];
+  for (byte i = 0; i < 7; i++) digitalWrite(segPins[i], codes[d][i]);
+  digitalWrite(digPins[idx], HIGH);
+}
